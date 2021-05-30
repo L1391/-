@@ -1,0 +1,230 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <meta charset="UTF-8"/>
+        <title>密码名</title>
+        <style>
+
+            table {
+                border: black solid 2px;
+                border-collapse: collapse;
+            }
+
+            td {
+                border: black solid 2px;
+                width: 90px;
+                height: 90px;
+                text-align: center;
+                font-size: 45px;
+            }
+
+            #control p{
+                display: inline-block;
+            }
+
+            ul {
+                margin-top: 2px;
+                margin-bottom: 5px;
+            }
+
+
+        </style>
+        <script>
+            var WORDS = [
+    "看", "水","石","火","木","气","去","来","米",
+    "饭", "糖","坐","做","风","菜","马","打","家",
+    "口", "东西","分","跟","块","贵","好","大","小",
+    "心", "叫","月","日","天","毛","上","下","鱼",
+    "送", "平","开","路","收","子","女","男","请",
+    "明", "死","生","名","走","想","春","点","电",
+];
+
+var TILES = [
+    "red","red","red","red","red","red","red","red","red",
+    "cornflowerblue","cornflowerblue","cornflowerblue","cornflowerblue","cornflowerblue","cornflowerblue","cornflowerblue","cornflowerblue",
+    "wheat","wheat","wheat","wheat","wheat","wheat","wheat",
+    "grey"
+]
+
+function encodeUnicode(str) {
+  // first we use encodeURIComponent to get percent-encoded UTF-8,
+  // then we convert the percent encodings into raw bytes which
+  // can be fed into btoa.
+  return btoa(encodeURIComponent(str).replace(/%([0-9A-F]{2})/g,
+      function toSolidBytes(match, p1) {
+          return String.fromCharCode('0x' + p1);
+  }));
+}
+
+function decodeUnicode(str) {
+  // Going backwards: from bytestream, to percent-encoding, to original string.
+  return decodeURIComponent(atob(str).split('').map(function (c) {
+    return '%' + ('00' + c.charCodeAt(0).toString(16)).slice(-2);
+  }).join(''));
+}
+
+
+function shuffle(a) {
+    var j, x, i;
+    for (i = a.length - 1; i > 0; i--) {
+        j = Math.floor(Math.random() * (i + 1));
+        x = a[i];
+        a[i] = a[j];
+        a[j] = x;
+    }
+    return a;
+}
+
+function makeGame() {
+
+    let table = document.createElement("table");
+    table.id = "board-table";
+    let row;
+
+    for(let i = 0; i < TILES.length; i++) {
+        if (i % 5 == 0) {
+            if(i != 0) table.appendChild(row);
+            row = document.createElement("tr");
+        }
+
+        let cell = document.createElement("td");
+        cell.className = "unguessed";
+        cell.id = i;
+        cell.innerText = WORDS[i];
+        cell.onclick = function() {
+            cell.className = "guessed";
+            cell.style.color = "white";
+            cell.style.backgroundColor = TILES[i];
+        };
+
+        row.appendChild(cell);
+    }
+    table.appendChild(row);
+
+    document.getElementById("board").appendChild(table);
+}
+
+function newGame() {
+    let gameCode = document.getElementById("game-code-input").value;
+    if (gameCode != "" && gameCode != null) {
+        gameCode = decodeUnicode(gameCode);
+        let gameCodeArray = gameCode.split(",");
+        console.log(gameCodeArray);
+        WORDS = gameCodeArray.slice(0, TILES.length);
+        
+        for (let i = 0; i< TILES.length; i++) {
+            if (gameCodeArray[TILES.length][i] == "r") {
+                TILES[i] = "red";
+            } else if (gameCodeArray[TILES.length][i] == "c") {
+                TILES[i] = "cornflowerblue";
+            } else if (gameCodeArray[TILES.length][i] == "w") {
+                TILES[i] = "wheat";
+            } else if (gameCodeArray[TILES.length][i] == "g") {
+                TILES[i] = "grey";
+            } else {
+                alert("游戏号有问题");
+                return;
+            }
+        }
+
+    } else {
+        let input = document.getElementById("words").value;
+        input = input.split(/[,，]/);
+        console.log(input);
+
+        if (input.length < 25) {
+            alert("请写二十五词以上");
+            return;
+        }
+
+        WORDS = input;
+
+        shuffle(WORDS);
+        shuffle(TILES);
+    }
+
+    let oldBoard = document.getElementById("board-table");
+    oldBoard.remove();
+
+    makeGame();
+
+    document.getElementById("toggle-player-button").innerText = "猜人";
+    currentPlayer = "operator";
+}
+
+var currentPlayer = "operator";
+
+function loaded() {
+    makeGame();    
+}
+
+function togglePlayer() {
+    if (currentPlayer == "operator") {
+        for(let i = 0; i < TILES.length; i++) {
+            let cell = document.getElementById(i);
+            cell.style.backgroundColor = TILES[i];
+        }
+
+        document.getElementById("toggle-player-button").innerText = "提示人";
+        currentPlayer = "spymaster";
+
+    } else if (currentPlayer == "spymaster") {
+        for(let i = 0; i < TILES.length; i++) {
+            let cell = document.getElementById(i);
+            if (cell.className == "unguessed") {
+                cell.style.backgroundColor = "white";
+            }
+        }
+        document.getElementById("toggle-player-button").innerText = "猜人";
+        currentPlayer = "operator";
+
+
+    }
+}
+
+function makeGameCode() {
+    let code = "";
+    for (let i = 0; i < TILES.length; i++) {
+        code += WORDS[i] + ",";
+    }
+    for (tile of TILES) {
+        code += tile[0];
+    }
+
+    code = encodeUnicode(code);
+    document.getElementById("game-code-output").innerText = "游戏号:\n" + code;
+}
+
+function createGameFromCode() {
+
+}
+        </script>
+    </head>
+    <body onload="loaded()">
+        <b>密码名</b>
+        <ul>
+            <li>点就发现是红还是蓝</li>
+            <li>红先猜，然后蓝</li>
+            <li>白色的词已经被猜</li>
+        </ul>
+        <div id="board"></div>
+        <div id="control">
+            <p>按就换方面:</p>
+            <button id="toggle-player-button" onclick="togglePlayer()">猜人</button>
+            <p>按就有新的游戏:</p>
+            <button id="new-game-button" onclick="newGame()">新</button>
+            <p>按就可以分享你的游戏:</p>
+            <button id="share-game-button" onclick="makeGameCode()">分享</button>
+            <div id="game-code-output"> 游戏号：</div>
+            <p>把游戏号放在这，然后按“新”</p>
+            <input type="text" id="game-code-input" value=""/>
+            <p>游戏用的词（把逗点放在词中间）</p>
+            <input type="text" id="words" value="看, 水,石,火,木,气,去,来,米,
+            饭, 糖,坐,做,风,菜,马,打,家,
+            口, 东西,分,跟,块,贵,好,大,小,
+            心, 叫,月,日,天,毛,上,下,鱼,
+            送, 平,开,路,收,子,女,男,请,
+            明, 死,生,名,走,想,春,点,电" />
+        </div>
+    </body>
+</html>
